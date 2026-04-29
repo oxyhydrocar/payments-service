@@ -25,8 +25,8 @@ export interface OrderItem {
 export interface OrderCreatedEvent {
   eventType: "order.created";
   orderId: string;
-  userId: string;
-  total: number;
+  customerId: string;
+  totalAmount: number;
   items: OrderItem[];
   timestamp: string;
 }

@@ -11,18 +11,18 @@ describe("Payment eligibility", () => {
 });
 
 describe("Event handler", () => {
-  it("reads userId and total from order.created event", () => {
+  it("reads customerId and totalAmount from order.created event", () => {
     const event: OrderCreatedEvent = {
       eventType: "order.created",
       orderId: "order-1",
-      userId: "user-123",
-      total: 99.99,
+      customerId: "cust-123",
+      totalAmount: 99.99,
       items: [],
       timestamp: new Date().toISOString(),
     };
 
-    expect(event.userId).toBe("user-123");
-    expect(event.total).toBe(99.99);
+    expect(event.customerId).toBe("cust-123");
+    expect(event.totalAmount).toBe(99.99);
   });
 });
 

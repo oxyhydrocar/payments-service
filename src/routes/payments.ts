@@ -46,7 +46,7 @@ paymentsRouter.post("/webhook", async (req: Request, res: Response) => {
     result: "success" | "failure";
   };
 
-  const newStatus = result === "success" ? "paid" : "cancelled";
+  const newStatus = result === "success" ? "paid" : result;
 
   await query(
     `UPDATE orders SET status = $1, updated_at = now() WHERE id = $2`,
@@ -59,7 +59,7 @@ paymentsRouter.post("/webhook", async (req: Request, res: Response) => {
 
 export function handleOrderCreatedEvent(event: OrderCreatedEvent): void {
   console.log(
-    `[payments-service] order created for user ${event.userId}`,
-    `amount: ${event.total}`
+    `[payments-service] order created for customer ${event.customerId}`,
+    `amount: ${event.totalAmount}`
   );
 }
