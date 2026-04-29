@@ -1,12 +1,12 @@
 import { Order, OrderStatus, OrderCreatedEvent } from "../types/shared";
 
 describe("Payment eligibility", () => {
-  it("only initiates payment for pending_payment orders", () => {
-    const isEligible = (status: OrderStatus) => status === "pending_payment";
+  it("only initiates payment for AWAITING_PAYMENT orders", () => {
+    const isEligible = (status: OrderStatus) => status === "AWAITING_PAYMENT";
 
-    expect(isEligible("pending_payment")).toBe(true);
-    expect(isEligible("paid")).toBe(false);
-    expect(isEligible("pending")).toBe(false);
+    expect(isEligible("AWAITING_PAYMENT")).toBe(true);
+    expect(isEligible("PAID")).toBe(false);
+    expect(isEligible("CANCELLED")).toBe(false);
   });
 });
 
@@ -28,9 +28,10 @@ describe("Event handler", () => {
 
 describe("Webhook status mapping", () => {
   it("maps gateway result to order status", () => {
-    const mapResult = (r: "success" | "failure") => r === "success" ? "paid" : "cancelled";
+    const mapResult = (r: "success" | "failure"): OrderStatus =>
+      r === "success" ? "PAID" : "CANCELLED";
 
-    expect(mapResult("success")).toBe("paid");
-    expect(mapResult("failure")).toBe("cancelled");
+    expect(mapResult("success")).toBe("PAID");
+    expect(mapResult("failure")).toBe("CANCELLED");
   });
 });

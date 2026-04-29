@@ -1,15 +1,18 @@
 export type OrderStatus =
-  | "pending"
-  | "pending_payment"
-  | "paid"
-  | "cancelled"
-  | "refunded";
+  | "AWAITING_PAYMENT"
+  | "PAYMENT_PENDING"
+  | "PAID"
+  | "FULFILLING"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "CANCELLED"
+  | "REFUNDED";
 
 export interface Order {
   id: string;
-  userId: string;
+  customerId: string;
   items: OrderItem[];
-  total: number;
+  totalAmount: number;
   status: OrderStatus;
   createdAt: string;
   updatedAt: string;
