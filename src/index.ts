@@ -1,13 +1,9 @@
 import express from "express";
 import { paymentsRouter } from "./routes/payments";
-import { Pool } from "pg";
+import { db } from "./db/client";
 
 const app = express();
 app.use(express.json());
-
-const db = new Pool({
-  connectionString: process.env.DATABASE_URL || "postgresql://localhost:5432/orders_db",
-});
 
 // Poll for orders that are ready for payment
 async function processPendingOrders() {
