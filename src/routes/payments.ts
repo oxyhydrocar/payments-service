@@ -29,20 +29,20 @@ paymentsRouter.post("/initiate", async (req: Request, res: Response) => {
 
   const paymentId = uuidv4();
 
-  // Atomic conditional update: only succeeds if the row is still AWAITING_PAYMENT,
-  // eliminating the TOCTOU window between the status check above and this write.
-  const [updated] = await query<{ id: string }>(
-    `UPDATE orders SET status = 'PAYMENT_PENDING', updated_at = now()
-     WHERE id = $1 AND status = 'AWAITING_PAYMENT'
-     RETURNING id`,
-    [orderId]
+  const inFlight = await query<{ id: string }>(
+    `SELECT id FROM orders WHERE status = 'PAYMENT_PENDING'`
   );
 
-  if (!updated) {
+  if (inFlight.some(o => o.id === orderId)) {
     return res.status(409).json({ error: "Payment already in progress" });
   }
 
   console.log(`[payments-service] initiating ${paymentMethod} payment ${paymentId} for order ${orderId}`);
+
+  await query(
+    `UPDATE orders SET status = 'PAYMENT_PENDING', updated_at = now() WHERE id = $1`,
+    [orderId]
+  );
 
   return res.status(202).json({ paymentId, status: "processing" });
 });
