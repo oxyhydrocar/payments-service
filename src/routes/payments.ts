@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 import { query } from "../db/client";
-import { Order, OrderCreatedEvent, OrderStatus } from "../types/shared";
+import { Order, OrderCreatedEvent } from "../types/shared";
 
 export const paymentsRouter = Router();
 
@@ -60,21 +60,20 @@ paymentsRouter.post("/webhook", async (req: Request, res: Response) => {
       result: "success" | "failure";
     };
 
-    const [current] = await query<{ status: OrderStatus }>(
-      `SELECT status FROM orders WHERE id = $1`,
-      [orderId]
-    );
-
-    if (current?.status !== "PAYMENT_PENDING") {
-      return res.status(409).json({ error: "Payment not in progress" });
-    }
-
     const newStatus = result === "success" ? "PAID" : "AWAITING_PAYMENT";
 
-    await query(
-      `UPDATE orders SET status = $1, updated_at = now() WHERE id = $2`,
+    // Atomic conditional update: guards against concurrent webhook deliveries
+    // both passing a separate SELECT guard and clobbering each other's write.
+    const [updated] = await query<{ id: string }>(
+      `UPDATE orders SET status = $1, updated_at = now()
+       WHERE id = $2 AND status = 'PAYMENT_PENDING'
+       RETURNING id`,
       [newStatus, orderId]
     );
+
+    if (!updated) {
+      return res.status(409).json({ error: "Payment not in progress" });
+    }
 
     console.log(`[payments-service] webhook: payment ${paymentId} → ${newStatus}`);
     return res.json({ received: true });
