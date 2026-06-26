@@ -72,7 +72,7 @@ app.get("/payments/:orderId", async (req, res) => {
   const row = result.rows[0];
   res.json({
     orderId: row.id,
-    userId: row.id,
+    userId: row.user_id,
     amount: row.total,
     orderStatus: row.status,
     paymentStatus: row.payment_status,
