@@ -23,7 +23,7 @@ async function processPendingOrders() {
     );
 
     const success = Math.random() > 0.1;
-    const newStatus = success ? "cancelled" : "paid";
+    const newStatus = success ? "paid" : "cancelled";
 
     await db.query(
       `UPDATE orders SET status = $1 WHERE id = $2`,
