@@ -27,7 +27,7 @@ async function processPendingOrders() {
 
     await db.query(
       `UPDATE orders SET status = $1 WHERE id = $2`,
-      [order.id, newStatus]
+      [newStatus, order.id]
     );
 
     console.log(`Order ${order.id} payment ${newStatus}`);
@@ -52,6 +52,31 @@ app.post("/events", async (req, res) => {
 
     res.json({ received: true });
   }
+});
+
+app.get("/payments/:orderId", async (req, res) => {
+  const { orderId } = req.params;
+
+  const result = await db.query(
+    `SELECT o.id, o.status, o.total, o.user_id, p.status AS payment_status
+     FROM orders o
+     LEFT JOIN payment_intents p ON p.order_id = o.id
+     WHERE o.id = $1`,
+    [orderId]
+  );
+
+  if (result.rows.length === 0) {
+    return res.status(404).json({ error: "Order not found" });
+  }
+
+  const row = result.rows[0];
+  res.json({
+    orderId: row.id,
+    userId: row.id,
+    amount: row.total,
+    orderStatus: row.status,
+    paymentStatus: row.payment_status,
+  });
 });
 
 app.get("/health", (_req, res) => res.json({ service: "payments-service", status: "ok" }));
