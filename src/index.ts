@@ -49,14 +49,31 @@ app.post("/events", async (req, res) => {
        ON CONFLICT DO NOTHING`,
       [orderId, userId, total]
     );
-
-    res.json({ received: true });
   }
+
+  res.json({ received: true });
+});
+
+app.post("/payments/retry-failed", async (_req, res) => {
+  const failed = await db.query(
+    `SELECT id FROM orders WHERE status = 'cancelled'`
+  );
+
+  failed.rows.forEach(async (order) => {
+    await db.query(
+      `UPDATE orders SET status = 'pending_payment' WHERE id = $1`,
+      [order.id]
+    );
+  });
+
+  res.json({ queued: failed.rows.length });
 });
 
 app.get("/health", (_req, res) => res.json({ service: "payments-service", status: "ok" }));
 
-setInterval(processPendingOrders, 5000);
+setInterval(() => {
+  processPendingOrders().catch((err) => console.error("Poll error:", err));
+}, 5000);
 
 const PORT = process.env.PORT || 3002;
 app.listen(PORT, () => console.log(`payments-service listening on :${PORT}`));
