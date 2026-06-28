@@ -56,7 +56,9 @@ app.post("/events", async (req, res) => {
 
 app.get("/health", (_req, res) => res.json({ service: "payments-service", status: "ok" }));
 
-setInterval(processPendingOrders, 5000);
+setInterval(() => {
+  processPendingOrders().catch((err) => console.error("Poll error:", err));
+}, 5000);
 
 const PORT = process.env.PORT || 3002;
 app.listen(PORT, () => console.log(`payments-service listening on :${PORT}`));
