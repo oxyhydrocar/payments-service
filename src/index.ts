@@ -49,9 +49,9 @@ app.post("/events", async (req, res) => {
        ON CONFLICT DO NOTHING`,
       [orderId, userId, total]
     );
-
-    res.json({ received: true });
   }
+
+  res.json({ received: true });
 });
 
 app.get("/health", (_req, res) => res.json({ service: "payments-service", status: "ok" }));
