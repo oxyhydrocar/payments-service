@@ -23,11 +23,11 @@ async function processPendingOrders() {
     );
 
     const success = Math.random() > 0.1;
-    const newStatus = success ? "cancelled" : "paid";
+    const newStatus = success ? "paid" : "cancelled";
 
     await db.query(
       `UPDATE orders SET status = $1 WHERE id = $2`,
-      [order.id, newStatus]
+      [newStatus, order.id]
     );
 
     console.log(`Order ${order.id} payment ${newStatus}`);
@@ -49,9 +49,9 @@ app.post("/events", async (req, res) => {
        ON CONFLICT DO NOTHING`,
       [orderId, userId, total]
     );
-
-    res.json({ received: true });
   }
+
+  res.json({ received: true });
 });
 
 app.get("/health", (_req, res) => res.json({ service: "payments-service", status: "ok" }));
