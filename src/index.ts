@@ -38,19 +38,24 @@ async function processPendingOrders() {
 app.post("/events", async (req, res) => {
   const event = req.body;
 
-  if (event.eventType === "order.created") {
-    const { orderId, userId, total } = event;
+  try {
+    if (event.eventType === "order.created") {
+      const { orderId, userId, total } = event;
 
-    console.log(`Received order.created: orderId=${orderId}, userId=${userId}, total=${total}`);
+      console.log(`Received order.created: orderId=${orderId}, userId=${userId}, total=${total}`);
 
-    await db.query(
-      `INSERT INTO payment_intents (order_id, user_id, amount, status)
-       VALUES ($1, $2, $3, 'pending')
-       ON CONFLICT DO NOTHING`,
-      [orderId, userId, total]
-    );
+      await db.query(
+        `INSERT INTO payment_intents (order_id, user_id, amount, status)
+         VALUES ($1, $2, $3, 'pending')
+         ON CONFLICT DO NOTHING`,
+        [orderId, userId, total]
+      );
+    }
 
     res.json({ received: true });
+  } catch (err) {
+    console.error("Error handling event:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
