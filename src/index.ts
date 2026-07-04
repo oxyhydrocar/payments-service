@@ -11,7 +11,7 @@ const db = new Pool({
 // Poll for orders that are ready for payment
 async function processPendingOrders() {
   const orders = await db.query(
-    `SELECT id, user_id, total, status FROM orders WHERE status = 'pending_payment'`
+    `SELECT id, user_id, total, status FROM orders WHERE status = 'PAYMENT_PENDING'`
   );
 
   for (const order of orders.rows) {
