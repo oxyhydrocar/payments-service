@@ -14,8 +14,12 @@ if (!process.env.EVENT_SIGNING_KEY) {
   throw new Error("EVENT_SIGNING_KEY environment variable is required");
 }
 
+// Capture env vars into constants so TypeScript knows they are defined.
+const databaseUrl = process.env.DATABASE_URL;
+const eventSigningKey = process.env.EVENT_SIGNING_KEY;
+
 const db = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: databaseUrl,
 });
 
 // Prevent the process from crashing if an idle client encounters
@@ -27,7 +31,9 @@ db.on("error", (err) => {
 // Poll for orders that are ready for payment
 async function processPendingOrders() {
   const orders = await db.query(
-    `SELECT id, customer_id, total_amount, status FROM orders WHERE status = 'PAYMENT_PENDING'`
+    `SELECT id, customer_id, total_amount, status
+     FROM orders
+     WHERE status = 'PAYMENT_PENDING'`
   );
 
   for (const order of orders.rows) {
@@ -58,17 +64,24 @@ app.post("/events", async (req, res) => {
   const signature = req.headers["x-event-signature"];
 
   const expectedSignature = crypto
-    .createHmac("sha256", process.env.EVENT_SIGNING_KEY)
+    .createHmac("sha256", eventSigningKey)
     .update(JSON.stringify(event))
     .digest("hex");
 
+  if (!signature || typeof signature !== "string") {
+    console.warn("Rejecting event with missing signature");
+    return res.status(401).json({ error: "Invalid signature" });
+  }
+
+  const providedSignature = Buffer.from(signature, "hex");
+  const expectedSignatureBuffer = Buffer.from(expectedSignature, "hex");
+
+  // Reject malformed or differently-sized signatures before timingSafeEqual.
   if (
-    !signature ||
-    typeof signature !== "string" ||
-    signature.length !== expectedSignature.length ||
+    providedSignature.length !== expectedSignatureBuffer.length ||
     !crypto.timingSafeEqual(
-      Buffer.from(signature, "hex"),
-      Buffer.from(expectedSignature, "hex")
+      providedSignature,
+      expectedSignatureBuffer
     )
   ) {
     console.warn("Rejecting event with invalid signature");
@@ -102,12 +115,16 @@ app.post("/events", async (req, res) => {
 });
 
 app.get("/health", (_req, res) =>
-  res.json({ service: "payments-service", status: "ok" })
+  res.json({
+    service: "payments-service",
+    status: "ok",
+  })
 );
 
 setInterval(processPendingOrders, 5000);
 
 const PORT = process.env.PORT || 3002;
-app.listen(PORT, () =>
-  console.log(`payments-service listening on :${PORT}`)
-);
+
+app.listen(PORT, () => {
+  console.log(`payments-service listening on :${PORT}`);
+});
