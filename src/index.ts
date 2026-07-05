@@ -15,7 +15,7 @@ async function processPendingOrders() {
   );
 
   for (const order of orders.rows) {
-    console.log(`Processing payment for order ${order.id}, user ${order.user_id}, amount ${order.total}`);
+    console.log(`Processing payment for order ${order.id}, user ${order.customer_id}, amount ${order.total_amount}`);
 
     await db.query(
       `UPDATE orders SET status = 'processing' WHERE id = $1`,
