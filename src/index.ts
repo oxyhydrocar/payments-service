@@ -5,9 +5,13 @@ import { Pool } from "pg";
 const app = express();
 app.use(express.json());
 
-// Fail fast if DATABASE_URL is not configured
+// Fail fast if required environment variables are missing
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL environment variable is required");
+}
+
+if (!process.env.EVENT_SIGNING_KEY) {
+  throw new Error("EVENT_SIGNING_KEY environment variable is required");
 }
 
 const db = new Pool({
@@ -31,17 +35,18 @@ async function processPendingOrders() {
       `Processing payment for order ${order.id}, user ${order.customer_id}, amount ${order.total_amount}`
     );
 
-    await db.query(`UPDATE orders SET status = 'processing' WHERE id = $1`, [
-      order.id,
-    ]);
+    await db.query(
+      `UPDATE orders SET status = 'processing' WHERE id = $1`,
+      [order.id]
+    );
 
     const success = Math.random() > 0.1;
     const newStatus = success ? "paid" : "cancelled";
 
-    await db.query(`UPDATE orders SET status = $1 WHERE id = $2`, [
-      newStatus,
-      order.id,
-    ]);
+    await db.query(
+      `UPDATE orders SET status = $1 WHERE id = $2`,
+      [newStatus, order.id]
+    );
 
     console.log(`Order ${order.id} payment ${newStatus}`);
   }
@@ -53,11 +58,19 @@ app.post("/events", async (req, res) => {
   const signature = req.headers["x-event-signature"];
 
   const expectedSignature = crypto
-    .createHmac("sha256", process.env.EVENT_SIGNING_KEY!)
+    .createHmac("sha256", process.env.EVENT_SIGNING_KEY)
     .update(JSON.stringify(event))
     .digest("hex");
 
-  if (!signature || signature !== expectedSignature) {
+  if (
+    !signature ||
+    typeof signature !== "string" ||
+    signature.length !== expectedSignature.length ||
+    !crypto.timingSafeEqual(
+      Buffer.from(signature, "hex"),
+      Buffer.from(expectedSignature, "hex")
+    )
+  ) {
     console.warn("Rejecting event with invalid signature");
     return res.status(401).json({ error: "Invalid signature" });
   }
