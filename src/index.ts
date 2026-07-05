@@ -37,9 +37,27 @@ async function processPendingOrders() {
 // Handle order.created events
 app.post("/events", async (req, res) => {
   const event = req.body;
+  const signature = req.headers['x-event-signature'];
+  const expectedSignature = crypto
+    .createHmac('sha256', process.env.EVENT_SIGNING_KEY)
+    .update(JSON.stringify(event))
+    .digest('hex');
+
+  if (!signature || signature !== expectedSignature) {
+    console.warn('Rejecting event with invalid signature');
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+
+  if (!event.eventType || typeof event.eventType !== 'string') {
+    return res.status(400).json({ error: 'Missing or invalid eventType' });
+  }
 
   if (event.eventType === "order.created") {
     const { orderId, userId, total } = event;
+
+    if (!orderId || !userId || typeof total !== 'number' || total <= 0) {
+      return res.status(400).json({ error: 'Invalid order data' });
+    }
 
     console.log(`Received order.created: orderId=${orderId}, userId=${userId}, total=${total}`);
 
