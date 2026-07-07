@@ -27,7 +27,7 @@ async function processPendingOrders() {
 
     await db.query(
       `UPDATE orders SET status = $1 WHERE id = $2`,
-      [newStatus, order.id]
+      [order.id, newStatus]
     );
 
     console.log(`Order ${order.id} payment ${newStatus}`);
