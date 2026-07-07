@@ -11,7 +11,15 @@ paymentsRouter.post("/initiate", async (req: Request, res: Response) => {
     paymentMethod: "card" | "paypal";
   };
 
-  const [order] = await query<Order>(
+  if (!orderId || typeof orderId !== "string") {
+    return res.status(400).json({ error: "orderId is required" });
+  }
+  if (paymentMethod !== "card" && paymentMethod !== "paypal") {
+    return res.status(400).json({ error: "paymentMethod must be 'card' or 'paypal'" });
+  }
+
+  type OrderRow = Pick<Order, "id" | "customerId" | "totalAmount" | "status">;
+  const [order] = await query<OrderRow>(
     `SELECT id, user_id as "customerId", total as "totalAmount", status
      FROM orders WHERE id = $1`,
     [orderId]
@@ -74,9 +82,15 @@ paymentsRouter.post("/webhook", async (req: Request, res: Response) => {
   return res.json({ received: true });
 });
 
-export function handleOrderCreatedEvent(event: OrderCreatedEvent): void {
+export async function handleOrderCreatedEvent(event: OrderCreatedEvent): Promise<void> {
   console.log(
     `[payments-service] order created for customer ${event.customerId}`,
     `amount: ${event.totalAmount}`
+  );
+  await query(
+    `INSERT INTO payment_intents (order_id, user_id, amount, status)
+     VALUES ($1, $2, $3, 'pending')
+     ON CONFLICT DO NOTHING`,
+    [event.orderId, event.customerId, event.totalAmount]
   );
 }

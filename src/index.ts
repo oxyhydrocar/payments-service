@@ -1,13 +1,10 @@
 import express from "express";
-import { paymentsRouter } from "./routes/payments";
-import { Pool } from "pg";
+import { paymentsRouter, handleOrderCreatedEvent } from "./routes/payments";
+import { db } from "./db/client";
+import { OrderCreatedEvent } from "./types/shared";
 
 const app = express();
 app.use(express.json());
-
-const db = new Pool({
-  connectionString: process.env.DATABASE_URL || "postgresql://localhost:5432/orders_db",
-});
 
 // Poll for orders that are ready for payment
 async function processPendingOrders() {
@@ -40,16 +37,7 @@ app.post("/events", async (req, res) => {
   const event = req.body;
 
   if (event.eventType === "order.created") {
-    const { orderId, userId, total } = event;
-
-    console.log(`Received order.created: orderId=${orderId}, userId=${userId}, total=${total}`);
-
-    await db.query(
-      `INSERT INTO payment_intents (order_id, user_id, amount, status)
-       VALUES ($1, $2, $3, 'pending')
-       ON CONFLICT DO NOTHING`,
-      [orderId, userId, total]
-    );
+    await handleOrderCreatedEvent(event as OrderCreatedEvent);
   }
 
   res.json({ received: true });
