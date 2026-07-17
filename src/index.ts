@@ -1,12 +1,9 @@
 import express from "express";
-import { Pool } from "pg";
+import { paymentsRouter } from "./routes/payments";
+import { db } from "./db/client";
 
 const app = express();
 app.use(express.json());
-
-const db = new Pool({
-  connectionString: process.env.DATABASE_URL || "postgresql://localhost:5432/orders_db",
-});
 
 // Poll for orders that are ready for payment
 async function processPendingOrders() {
@@ -55,6 +52,7 @@ app.post("/events", async (req, res) => {
 });
 
 app.get("/health", (_req, res) => res.json({ service: "payments-service", status: "ok" }));
+app.use("/payments", paymentsRouter);
 
 setInterval(processPendingOrders, 5000);
 
