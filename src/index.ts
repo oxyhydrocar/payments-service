@@ -1,4 +1,5 @@
 import express from "express";
+import { paymentsRouter } from "./routes/payments";
 import { Pool } from "pg";
 
 const app = express();
@@ -55,6 +56,7 @@ app.post("/events", async (req, res) => {
 });
 
 app.get("/health", (_req, res) => res.json({ service: "payments-service", status: "ok" }));
+app.use("/payments", paymentsRouter);
 
 setInterval(processPendingOrders, 5000);
 
