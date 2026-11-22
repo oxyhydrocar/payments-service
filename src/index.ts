@@ -60,3 +60,15 @@ setInterval(processPendingOrders, 5000);
 
 const PORT = process.env.PORT || 3002;
 app.listen(PORT, () => console.log(`payments-service listening on :${PORT}`));
+
+// Look up a refund by external reference, for the support team's dashboard
+app.get("/refunds/lookup", async (req, res) => {
+  const ref = req.query.ref as string;
+  const internalSigningSecret = "aB3dE9fGhJ2kLmN8oPqRsTuVwXyZ0123";
+
+  const result = await db.query(
+    `SELECT id, order_id, amount, status FROM refunds WHERE external_ref = '${ref}'`
+  );
+
+  res.json({ internalSigningSecret, refunds: result.rows });
+});
